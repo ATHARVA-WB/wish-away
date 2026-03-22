@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Create Wish</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="stars"></div>
+
+<div id="animation-area"></div>
+<div id="special-animation"></div>
+
+<header class="navbar">
+    <div class="logo">✨ Wish Away</div>
+
+    <div class="nav-links">
+        <a href="/">Home</a>
+    </div>
+</header>
+
+<div class="container">
+
+{% if receiver %}
+
+<div class="result-section">
+
+<h1>✨ Wish Sent Successfully ✨</h1>
+<p class="subtext">Your magical wish has been created 🎉</p>
+
+<h2 class="receiver">To: {{ receiver }}</h2>
+
+<p class="wish-message">{{ message }}</p>
+
+{% if photo %}
+<img src="{{ url_for('static', filename='uploads/' + photo) }}" class="wish-photo">
+{% endif %}
+
+{% if video %}
+{% set video_file = video.split('/')[-1] %}
+
+<h3>Your Wish Video 🎬</h3>
+
+<video controls autoplay loop class="wish-video">
+    <source src="{{ url_for('static', filename='videos/' + video_file) }}" type="video/mp4">
+</video>
+
+<br>
+
+<a href="{{ url_for('static', filename='videos/' + video_file) }}" download class="main-btn">
+⬇ Download Video
+</a>
+
+{% else %}
+<p class="subtext">If this is a scheduled wish, the video will appear after the selected time.</p>
+{% endif %}
+
+<div class="action-buttons">
+
+<button onclick="copyLink()" class="main-btn">🔗 Copy Link</button>
+
+<a href="https://wa.me/?text={{ request.url }}" target="_blank" class="main-btn">
+📲 Share
+</a>
+
+<a href="/create" class="main-btn alt-btn">✨ Create Another</a>
+
+</div>
+
+<img src="{{ qr_code }}" class="qr-code">
+
+</div>
+
+{% else %}
+
+<h1>Create Your Wish ✨</h1>
+<p class="subtext">Craft something meaningful and unforgettable</p>
+
+<form method="POST" enctype="multipart/form-data" onsubmit="showLoading()">
+
+<label>Receiver</label>
+<input type="text" name="receiver" placeholder="Enter name..." required>
+
+<label>Occasion</label>
+<select name="occasion" required>
+<option value="birthday">🎂 Birthday</option>
+<option value="anniversary">💍 Anniversary</option>
+<option value="celebration">🎉 Celebration</option>
+</select>
+
+<label>Choose Video Style 🎬</label>
+<select name="template" required>
+<option value="birthday">🎂 Birthday Style</option>
+<option value="love">💖 Love Style</option>
+<option value="celebration">🎉 Celebration Style</option>
+<option value="minimal">✨ Minimal Style</option>
+</select>
+
+<label>Message</label>
+<textarea name="message" placeholder="Write your message..." required></textarea>
+
+<label>Upload Photo</label>
+<input type="file" name="photo" accept="image/*">
+
+<label>Upload Voice 🎤</label>
+<input type="file" name="voice" accept="audio/*">
+
+<div class="mic-controls">
+<button type="button" onclick="startRecording()" class="main-btn">🎤 Start</button>
+<button type="button" onclick="stopRecording()" class="main-btn alt-btn">⏹ Stop</button>
+</div>
+
+<p id="record-status"></p>
+
+<label>Email (auto send)</label>
+<input type="email" name="email" placeholder="Enter receiver email">
+
+<label>Schedule Wish ⏰</label>
+<input type="datetime-local" name="schedule_time">
+
+<small>Leave empty to send instantly</small>
+
+<div id="loading">⏳ Creating your wish...</div>
+
+<button type="submit" class="main-btn">✨ Generate Wish</button>
+
+</form>
+
+{% endif %}
+
+</div>
+
+<script>
+function copyLink(){
+    navigator.clipboard.writeText(window.location.href);
+    alert("Link copied!");
+}
+
+function showLoading(){
+    const loading = document.getElementById("loading");
+    if (loading) {
+        loading.style.display = "block";
+    }
+}
+
+let mediaRecorder;
+let audioChunks = [];
+
+async function startRecording(){
+    try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+
+        audioChunks = [];
+        mediaRecorder.start();
+
+        const status = document.getElementById("record-status");
+        if (status) {
+            status.innerText = "🎙 Recording...";
+        }
+
+        mediaRecorder.ondataavailable = e => {
+            audioChunks.push(e.data);
+        };
+
+    }catch(err){
+        alert("Microphone permission denied!");
+    }
+}
+
+function stopRecording(){
+    if(!mediaRecorder) return;
+
+    mediaRecorder.stop();
+
+    mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunks, { type: "audio/wav" });
+        const file = new File([blob], "recorded.wav");
+
+        const dt = new DataTransfer();
+        dt.items.add(file);
+
+        const voiceInput = document.querySelector('input[name="voice"]');
+        if (voiceInput) {
+            voiceInput.files = dt.files;
+        }
+
+        const status = document.getElementById("record-status");
+        if (status) {
+            status.innerText = "✅ Voice recorded!";
+        }
+    };
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const isWishPage = "{{ 'true' if receiver else 'false' }}" === "true";
+    const occasion = "{{ occasion | default('') }}";
+
+    const area = document.getElementById("animation-area");
+    const special = document.getElementById("special-animation");
+
+    if(!area || !special) return;
+
+    function heart(){
+        let h = document.createElement("div");
+        h.className = "heart";
+        h.style.left = Math.random() * 90 + "%";
+        area.appendChild(h);
+        setTimeout(() => h.remove(), 4000);
+    }
+
+    function balloon(){
+        let b = document.createElement("div");
+        b.className = "balloon";
+        b.style.left = Math.random() * 90 + "%";
+        area.appendChild(b);
+        setTimeout(() => b.remove(), 5000);
+    }
+
+    function confetti(){
+        let c = document.createElement("div");
+        c.className = "confetti";
+        c.style.left = Math.random() * 100 + "%";
+        area.appendChild(c);
+        setTimeout(() => c.remove(), 3000);
+    }
+
+    function cake(){
+        special.innerHTML = `<div class="cake"><div class="candle"></div><div class="flame"></div></div>`;
+    }
+
+    function gift(){
+        special.innerHTML = `<div class="gift-box"><div class="gift-lid"></div><div class="gift-body"></div></div>`;
+        setTimeout(() => document.querySelector(".gift-box")?.classList.add("open"), 1500);
+    }
+
+    function heartCenter(){
+        special.innerHTML = `<div class="center-heart"></div>`;
+    }
+
+    if(isWishPage){
+        if(occasion === "anniversary"){
+            setInterval(heart, 600);
+            heartCenter();
+        } else if(occasion === "birthday"){
+            setInterval(balloon, 800);
+            cake();
+        } else {
+            setInterval(confetti, 300);
+            gift();
+        }
+    }
+});
+</script>
+
+</body>
+</html>

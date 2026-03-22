@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Wish Away</title>
+
+<!-- PREMIUM FONTS -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="stars"></div>
+
+<header class="navbar">
+    <div class="logo">
+    <img src="{{ url_for('static', filename='assets/logo.png') }}" alt="logo">
+    <span>Wish Away</span>
+    </div>
+
+    <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/create" class="nav-btn">Send Wish</a>
+    </div>
+</header>
+
+<section class="hero">
+
+    <div class="hero-left">
+
+        <h1 class="hero-title">
+            Create Cinematic<br>
+            Wishes That Feel<br>
+            <span class="gradient-text">Magical</span>
+        </h1>
+
+        <p class="hero-sub">
+            Turn your messages into cinematic video experiences with voice,
+            animation, and intelligent scheduling.
+        </p>
+
+        <div class="hero-buttons">
+            <a href="/create" class="main-btn">Create Wish</a>
+            <a href="#features" class="ghost-btn">Explore</a>
+        </div>
+
+    </div>
+
+    <div class="hero-right">
+        <div class="video-card">
+            <video autoplay muted loop playsinline>
+                <source src="{{ url_for('static', filename='assets/fireworks.mp4') }}" type="video/mp4">
+            </video>
+        </div>
+    </div>
+
+</section>
+
+<section class="cards" id="features">
+
+    <div class="card">
+        <h3>Cinematic Videos</h3>
+        <p>Premium animations and transitions crafted like a professional edit.</p>
+    </div>
+
+    <div class="card">
+        <h3>Voice Messages</h3>
+        <p>Add your voice to create deeply personal and emotional wishes.</p>
+    </div>
+
+    <div class="card">
+        <h3>Multiple Templates</h3>
+        <p>Choose from curated styles for every occasion.</p>
+    </div>
+
+    <div class="card">
+        <h3>Smart Scheduling</h3>
+        <p>Automatically deliver wishes at the perfect moment.</p>
+    </div>
+
+</section>
+
+<section class="cta">
+    <h2>Ready to create something memorable?</h2>
+    <p>Craft a beautiful wish in seconds and make someone smile.</p>
+    <a href="/create" class="main-btn">Start Creating</a>
+</section>
+
+</body>
+</html>

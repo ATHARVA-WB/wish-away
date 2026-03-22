@@ -1,0 +1,7 @@
+Flask==3.0.3
+moviepy
+pillow
+qrcode
+apscheduler
+gunicorn
+imageio-ffmpeg
