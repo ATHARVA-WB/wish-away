@@ -5,3 +5,5 @@ qrcode
 apscheduler
 gunicorn
 imageio-ffmpeg
+cloudinary
+requests

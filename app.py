@@ -10,7 +10,17 @@ from werkzeug.utils import secure_filename
 from PIL import Image, ImageDraw, ImageFont
 from moviepy import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip
 from apscheduler.schedulers.background import BackgroundScheduler
+import cloudinary
+import cloudinary.uploader
+import os
+import requests
+import io
 
+cloudinary.config(
+    cloud_name=os.getenv("CLOUD_NAME"),
+    api_key=os.getenv("API_KEY"),
+    api_secret=os.getenv("API_SECRET")
+)
 app = Flask(__name__)
 
 UPLOAD_FOLDER = "static/uploads"
@@ -177,9 +187,11 @@ def generate_wish_video(photo, rec, msg, wid, voice=None, template="minimal"):
             clips.append(overlay)
 
         # 🖼️ PHOTO
-        if photo and os.path.exists(photo):
+        if photo:
+            response = requests.get(photo)
+            img_data = io.BytesIO(response.content)
             img = (
-                ImageClip(photo)
+                ImageClip(img_data)
                 .with_duration(duration - 2)
                 .resized(height=320)
                 .with_position("center")
@@ -346,22 +358,23 @@ def create():
         v = None
 
         if photo and photo.filename:
-            p = secure_filename(photo.filename)
-            photo.save(f"{UPLOAD_FOLDER}/{p}")
+            result = cloudinary.uploader.upload(photo)
+            p = result["secure_url"]
+            
 
         if voice and voice.filename:
-            v = secure_filename(voice.filename)
-            voice.save(f"{AUDIO_FOLDER}/{v}")
+            result = cloudinary.uploader.upload(voice, resource_type="video")
+            v = result["secure_url"]
 
         video = None
 
         if not sch:
             video = generate_wish_video(
-                f"{UPLOAD_FOLDER}/{p}" if p else None,
+                p if p else None,
                 rec,
                 msg,
                 wid,
-                f"{AUDIO_FOLDER}/{v}" if v else None,
+                v if v else None,
                 template
             )
 
