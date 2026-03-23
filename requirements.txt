@@ -6,4 +6,4 @@ apscheduler
 gunicorn
 imageio-ffmpeg
 cloudinary
-requests
+requests 
