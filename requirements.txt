@@ -7,3 +7,4 @@ gunicorn
 imageio-ffmpeg
 cloudinary
 requests 
+sendgrid

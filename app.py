@@ -2,14 +2,15 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 import uuid
 import sqlite3
-import smtplib
 from datetime import datetime
-from email.mime.text import MIMEText
 
 import qrcode
 import cloudinary
 import cloudinary.uploader
 from apscheduler.schedulers.background import BackgroundScheduler
+
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 app = Flask(__name__)
 
@@ -64,47 +65,30 @@ init_db()
 
 # ---------- EMAIL ----------
 def send_email(to_email, wish_url):
-    sender = os.getenv("EMAIL_USER")
-    password = os.getenv("EMAIL_PASS")
-
-    print("DEBUG sender exists:", bool(sender))
-    print("DEBUG password exists:", bool(password))
-    print("DEBUG to_email:", to_email)
-
-    if not sender or not password:
-        print("Email credentials missing")
-        return False
-
     if not to_email:
-        print("Recipient email missing")
+        print("No email provided")
         return False
 
     try:
-        msg = MIMEText(
-            f"Your wish is ready!\n\n"
-            f"Open it here:\n{wish_url}\n\n"
-            f"Made with Wish Away"
+        message = Mail(
+            from_email='gatharva354@gmail.com',   # ✅ your verified email
+            to_emails=to_email,
+            subject='Your Wish is Ready 🎉',
+            html_content=f"""
+                <h2>🎉 Your Wish is Ready!</h2>
+                <p>Click below:</p>
+                <a href="{wish_url}">{wish_url}</a>
+            """
         )
 
-        msg["Subject"] = "Your Wish is Ready!"
-        msg["From"] = sender
-        msg["To"] = to_email
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        sg.send(message)
 
-        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=20)
-        
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-
-        server.login(sender, password)
-        server.send_message(msg)
-        server.quit()
-
-        print("Email sent successfully")
+        print("✅ Email sent")
         return True
 
     except Exception as e:
-        print("Email error:", e)
+        print("❌ Email error:", e)
         return False
 
 
@@ -163,13 +147,9 @@ def check():
 
 scheduler = BackgroundScheduler()
 
-def start_scheduler():
+if not scheduler.running:
     scheduler.add_job(check, "interval", seconds=30)
     scheduler.start()
-
-# Only run scheduler in main process
-if os.environ.get("RENDER") or __name__ == "__main__":
-    start_scheduler()
 
 
 # ---------- ROUTES ----------
