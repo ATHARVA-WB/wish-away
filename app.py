@@ -73,24 +73,36 @@ def send_email(to_email, wish_url):
     sender = os.getenv("EMAIL_USER")
     password = os.getenv("EMAIL_PASS")
 
-    msg = MIMEText(
-        f"🎉 Your wish is ready!\n\n"
-        f"Open it here:\n{wish_url}\n\n"
-        f"Made with Wish Away ✨"
-    )
+    print("DEBUG sender:", sender)
+    print("DEBUG password:", password)
+    print("DEBUG to_email:", to_email)
 
-    msg["Subject"] = "Your Wish is Ready!"
-    msg["From"] = sender
-    msg["To"] = to_email
+    if not sender or not password:
+        print("❌ Missing email credentials")
+        return
+
+    if not to_email:
+        print("❌ No recipient email")
+        return
 
     try:
+        msg = MIMEText(
+            f"🎉 Your wish is ready!\n\n"
+            f"Open it here:\n{wish_url}\n\n"
+            f"Made with Wish Away ✨"
+        )
+
+        msg["Subject"] = "Your Wish is Ready!"
+        msg["From"] = sender
+        msg["To"] = to_email
+
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
         server.login(sender, password)
         server.send_message(msg)
         server.quit()
 
-        print("✅ Email sent successfully")
+        print("✅ Email sent")
 
     except Exception as e:
         print("❌ Email error:", e)
