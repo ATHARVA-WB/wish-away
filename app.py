@@ -365,6 +365,14 @@ def create():
         photo = request.files.get("photo")
         voice = request.files.get("voice")
 
+        if photo and photo.filename:
+            if photo.content_length and photo.content_length > 5 * 1024 * 1024:
+                return "File too large (max 5MB)"
+            
+        if photo and photo.filename:
+            result = cloudinary.uploader.upload(photo)
+            p = result["secure_url"]
+
         wid = str(uuid.uuid4())[:8]
 
         p = None
