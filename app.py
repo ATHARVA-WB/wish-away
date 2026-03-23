@@ -162,8 +162,14 @@ def check():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(check, "interval", seconds=30)
-scheduler.start()
+
+def start_scheduler():
+    scheduler.add_job(check, "interval", seconds=30)
+    scheduler.start()
+
+# Only run scheduler in main process
+if os.environ.get("RENDER") or __name__ == "__main__":
+    start_scheduler()
 
 
 # ---------- ROUTES ----------
