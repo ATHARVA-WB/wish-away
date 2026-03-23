@@ -227,6 +227,7 @@ def generate_wish_video(photo, rec, msg, wid, voice=None, template="minimal"):
             .with_duration(duration - 3)
             .with_position(("center", 520))
             .with_start(2)
+            .fadein(1)
         )
 
         clips.append(txt)
@@ -325,14 +326,8 @@ def check():
             photo_path = photo if photo else None
             voice_path = voice if voice else None
 
-            video = generate_wish_video(
-                photo_path,
-                rec,
-                msg,
-                wid,
-                voice_path,
-                template or "minimal"
-            )
+            video = None 
+            
 
             cur.execute(
                 "UPDATE wishes SET video=?, sent=1 WHERE id=?",
@@ -386,15 +381,6 @@ def create():
 
         video = None
 
-        if not sch:
-            video = generate_wish_video(
-                p if p else None,
-                rec,
-                msg,
-                wid,
-                v if v else None,
-                template
-            )
 
         conn = sqlite3.connect("wishes.db")
         cur = conn.cursor()
