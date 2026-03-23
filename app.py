@@ -89,7 +89,11 @@ def send_email(to_email, wish_url):
         msg["To"] = to_email
 
         server = smtplib.SMTP("smtp.gmail.com", 587, timeout=20)
+        
+        server.ehlo()
         server.starttls()
+        server.ehlo()
+
         server.login(sender, password)
         server.send_message(msg)
         server.quit()
