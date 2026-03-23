@@ -176,7 +176,7 @@ def loop_audio(clip, duration):
 
 
 def generate_wish_video(photo, rec, msg, wid, voice=None, template="minimal"):
-    duration = 10
+    duration = 6
     assets = get_template_assets(template)
 
     bg = None
@@ -188,7 +188,7 @@ def generate_wish_video(photo, rec, msg, wid, voice=None, template="minimal"):
         bg = (
             VideoFileClip(assets["bg"])
             .subclipped(0, duration)
-            .resized(height=720)
+            .resized(height=480)
             .with_fps(30)
         )
 
@@ -227,7 +227,6 @@ def generate_wish_video(photo, rec, msg, wid, voice=None, template="minimal"):
             .with_duration(duration - 3)
             .with_position(("center", 520))
             .with_start(2)
-            .crossfadein(1)
         )
 
         clips.append(txt)
@@ -263,7 +262,7 @@ def generate_wish_video(photo, rec, msg, wid, voice=None, template="minimal"):
             codec="libx264",
             audio_codec="aac",
             preset="ultrafast",
-            threads=4,
+            threads=1,
             temp_audiofile=f"{VIDEO_FOLDER}/temp-{wid}.m4a",
             remove_temp=True
         )
