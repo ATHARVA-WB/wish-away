@@ -65,15 +65,20 @@ init_db()
 
 
 # ---------- EMAIL ----------
+import os
+import smtplib
+from email.mime.text import MIMEText
+
 def send_email(to_email, wish_url):
-    sender = "gatharva354@gmail.com"
-    password = "rzgj jyjc kzif seay"
+    sender = os.getenv("EMAIL_USER")
+    password = os.getenv("EMAIL_PASS")
 
     msg = MIMEText(
         f"🎉 Your wish is ready!\n\n"
         f"Open it here:\n{wish_url}\n\n"
         f"Made with Wish Away ✨"
     )
+
     msg["Subject"] = "Your Wish is Ready!"
     msg["From"] = sender
     msg["To"] = to_email
@@ -84,9 +89,11 @@ def send_email(to_email, wish_url):
         server.login(sender, password)
         server.send_message(msg)
         server.quit()
-        print("📩 Email sent successfully")
+
+        print("✅ Email sent successfully")
+
     except Exception as e:
-        print("Email error:", e)
+        print("❌ Email error:", e)
 
 
 # ---------- TEMPLATE TEXT IMAGE ----------
