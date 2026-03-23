@@ -13,6 +13,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 
+app.config['MAX_CONTENT_LENGTH'] = 6 * 1024 * 1024
+
 cloudinary.config(
     cloud_name=os.getenv("CLOUD_NAME"),
     api_key=os.getenv("API_KEY"),
