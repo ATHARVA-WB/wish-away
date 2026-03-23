@@ -341,7 +341,7 @@ def check():
             )
 
             if email:
-                send_email(email, f"http://127.0.0.1:5000/wish/{wid}")
+                send_email(email, f"https://wish-away.onrender.com/wish/{wid}")
 
     conn.commit()
     conn.close()
