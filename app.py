@@ -71,7 +71,7 @@ def send_email(to_email, wish_url):
 
     try:
         message = Mail(
-            from_email='gatharva354@gmail.com',   # ✅ your verified email
+            from_email='gatharva142@gmail.com',   # ✅ your verified email
             to_emails=to_email,
             subject='Your Wish is Ready 🎉',
             html_content=f"""
