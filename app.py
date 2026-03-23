@@ -323,8 +323,8 @@ def check():
         if scheduled_dt <= now:
             print("⏰ Sending scheduled wish:", wid)
 
-            photo_path = f"{UPLOAD_FOLDER}/{photo}" if photo else None
-            voice_path = f"{AUDIO_FOLDER}/{voice}" if voice else None
+            photo_path = photo if photo else None
+            voice_path = voice if voice else None
 
             video = generate_wish_video(
                 photo_path,
@@ -419,6 +419,9 @@ def create():
 
         conn.commit()
         conn.close()
+
+        if not sch and email:
+                send_email(email, f"https://wish-away.onrender.com/wish/{wid}") 
 
         return redirect(url_for("show", wish_id=wid))
 
