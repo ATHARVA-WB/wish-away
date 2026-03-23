@@ -1,27 +1,23 @@
 from flask import Flask, render_template, request, redirect, url_for
+import os
 import uuid
 import sqlite3
-import qrcode
-import os
 import smtplib
 from datetime import datetime
 from email.mime.text import MIMEText
-from werkzeug.utils import secure_filename
-from PIL import Image, ImageDraw, ImageFont
-from moviepy import VideoFileClip, ImageClip, CompositeVideoClip, AudioFileClip
-from apscheduler.schedulers.background import BackgroundScheduler
+
+import qrcode
 import cloudinary
 import cloudinary.uploader
-import os
-import requests
-import io
+from apscheduler.schedulers.background import BackgroundScheduler
+
+app = Flask(__name__)
 
 cloudinary.config(
     cloud_name=os.getenv("CLOUD_NAME"),
     api_key=os.getenv("API_KEY"),
-    api_secret=os.getenv("API_SECRET")
+    api_secret=os.getenv("API_SECRET"),
 )
-app = Flask(__name__)
 
 UPLOAD_FOLDER = "static/uploads"
 VIDEO_FOLDER = "static/videos"
@@ -65,234 +61,56 @@ init_db()
 
 
 # ---------- EMAIL ----------
-import os
-import smtplib
-from email.mime.text import MIMEText
-
 def send_email(to_email, wish_url):
     sender = os.getenv("EMAIL_USER")
     password = os.getenv("EMAIL_PASS")
 
-    print("DEBUG sender:", sender)
-    print("DEBUG password:", password)
+    print("DEBUG sender exists:", bool(sender))
+    print("DEBUG password exists:", bool(password))
     print("DEBUG to_email:", to_email)
 
     if not sender or not password:
-        print("❌ Missing email credentials")
-        return
+        print("Email credentials missing")
+        return False
 
     if not to_email:
-        print("❌ No recipient email")
-        return
+        print("Recipient email missing")
+        return False
 
     try:
         msg = MIMEText(
-            f"🎉 Your wish is ready!\n\n"
+            f"Your wish is ready!\n\n"
             f"Open it here:\n{wish_url}\n\n"
-            f"Made with Wish Away ✨"
+            f"Made with Wish Away"
         )
 
         msg["Subject"] = "Your Wish is Ready!"
         msg["From"] = sender
         msg["To"] = to_email
 
-        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=20)
         server.starttls()
         server.login(sender, password)
         server.send_message(msg)
         server.quit()
 
-        print("✅ Email sent")
+        print("Email sent successfully")
+        return True
 
     except Exception as e:
-        print("❌ Email error:", e)
+        print("Email error:", e)
+        return False
 
 
-# ---------- TEMPLATE TEXT IMAGE ----------
-def create_text_image_template(msg, rec, wid, template):
-    img = Image.new("RGBA", (720, 250), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
+# ---------- SAFE FILE CHECK ----------
+def get_file_size(file_obj):
     try:
-        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 42)
+        file_obj.seek(0, 2)
+        size = file_obj.tell()
+        file_obj.seek(0)
+        return size
     except Exception:
-        font = ImageFont.load_default()
-
-    text = f"{msg}\n\n— {rec}"
-
-    if template == "love":
-        color = (255, 120, 180)
-    elif template == "birthday":
-        color = (255, 220, 120)
-    elif template == "celebration":
-        color = (120, 255, 200)
-    else:
-        color = (255, 255, 255)
-
-    draw.text((42, 42), text, font=font, fill=(0, 0, 0, 200))
-    draw.text((40, 40), text, font=font, fill=color)
-
-    path = f"{VIDEO_FOLDER}/text_{wid}.png"
-    img.save(path)
-    return path
-
-
-# ---------- TEMPLATE ASSETS ----------
-def get_template_assets(template):
-    if template == "birthday":
-        return {
-            "bg": "static/assets/fireworks.mp4",
-            "music": "static/assets/birthday.mp3"
-        }
-    if template == "love":
-        return {
-            "bg": "static/assets/love.mp4",
-            "music": "static/assets/romantic.mp3"
-        }
-    if template == "celebration":
-        return {
-            "bg": "static/assets/party.mp4",
-            "music": "static/assets/music.mp3"
-        }
-    return {
-        "bg": "static/assets/fireworks.mp4",
-        "music": "static/assets/music.mp3"
-    }
-
-
-# ---------- VIDEO ----------
-from moviepy.audio.AudioClip import CompositeAudioClip
-
-# 🔁 manual audio loop (fix for your moviepy version)
-def loop_audio(clip, duration):
-    clips = []
-    total = 0
-
-    while total < duration:
-        clips.append(clip)
-        total += clip.duration
-
-    return CompositeAudioClip(clips).subclipped(0, duration)
-
-
-def generate_wish_video(photo, rec, msg, wid, voice=None, template="minimal"):
-    duration = 6
-    assets = get_template_assets(template)
-
-    bg = None
-    final = None
-    audio = None
-
-    try:
-        # 🎬 BACKGROUND
-        bg = (
-            VideoFileClip(assets["bg"])
-            .subclipped(0, duration)
-            .resized(height=480)
-            .with_fps(30)
-        )
-
-        clips = [bg]
-
-        # 🌫️ OVERLAY
-        overlay_path = "static/assets/overlay.png"
-        if os.path.exists(overlay_path):
-            overlay = (
-                ImageClip(overlay_path)
-                .with_duration(duration)
-                .resized(bg.size)
-                .with_opacity(0.35)
-            )
-            clips.append(overlay)
-
-        # 🖼️ PHOTO
-        if photo:
-            response = requests.get(photo)
-            img_data = io.BytesIO(response.content)
-            img = (
-                ImageClip(img_data)
-                .with_duration(duration - 2)
-                .resized(height=320)
-                .with_position("center")
-                .resize(lambda t: 1 + 0.08 * t)
-                .with_start(1)
-            )
-            clips.append(img)
-
-        # 📝 TEXT
-        text_img = create_text_image_template(msg, rec, wid, template)
-
-        txt = (
-            ImageClip(text_img)
-            .with_duration(duration - 3)
-            .with_position(("center", 520))
-            .with_start(2)
-            .fadein(1)
-        )
-
-        clips.append(txt)
-
-        final = CompositeVideoClip(clips)
-
-        # =========================
-        # 🔊 AUDIO (FIXED)
-        # =========================
-        try:
-            music = AudioFileClip(assets["music"])
-            music = loop_audio(music, duration).volumex(0.4)
-
-            if voice and os.path.exists(voice):
-                voice_clip = AudioFileClip(voice)
-                voice_clip = loop_audio(voice_clip, duration).volumex(1.6)
-
-                audio = CompositeAudioClip([music, voice_clip])
-            else:
-                audio = music
-
-            final = final.with_audio(audio)
-
-        except Exception as e:
-            print("Audio error:", e)
-
-        # 🎬 EXPORT
-        path = f"{VIDEO_FOLDER}/{wid}.mp4"
-
-        final.write_videofile(
-            path,
-            fps=30,
-            codec="libx264",
-            audio_codec="aac",
-            preset="ultrafast",
-            threads=1,
-            temp_audiofile=f"{VIDEO_FOLDER}/temp-{wid}.m4a",
-            remove_temp=True
-        )
-
-        return f"static/videos/{wid}.mp4"
-
-    except Exception as e:
-        print("Video generation error:", e)
-        return None
-
-    finally:
-        # 🔥 VERY IMPORTANT (fix crash)
-        try:
-            if final:
-                final.close()
-        except:
-            pass
-
-        try:
-            if bg:
-                bg.close()
-        except:
-            pass
-
-        try:
-            if audio:
-                audio.close()
-        except:
-            pass
+        return 0
 
 
 # ---------- SCHEDULER ----------
@@ -321,13 +139,9 @@ def check():
             continue
 
         if scheduled_dt <= now:
-            print("⏰ Sending scheduled wish:", wid)
+            print("Sending scheduled wish:", wid)
 
-            photo_path = photo if photo else None
-            voice_path = voice if voice else None
-
-            video = None 
-            
+            video = None
 
             cur.execute(
                 "UPDATE wishes SET video=?, sent=1 WHERE id=?",
@@ -355,68 +169,87 @@ def home():
 @app.route("/create", methods=["GET", "POST"])
 def create():
     if request.method == "POST":
-        rec = request.form.get("receiver")
-        msg = request.form.get("message")
-        occ = request.form.get("occasion")
-        email = request.form.get("email")
-        sch = request.form.get("schedule_time")
-        template = request.form.get("template") or "minimal"
+        try:
+            rec = request.form.get("receiver", "").strip()
+            msg = request.form.get("message", "").strip()
+            occ = request.form.get("occasion", "").strip()
+            email = request.form.get("email", "").strip()
+            sch = request.form.get("schedule_time", "").strip()
+            template = request.form.get("template", "minimal").strip()
 
-        photo = request.files.get("photo")
-        voice = request.files.get("voice")
+            photo = request.files.get("photo")
+            voice = request.files.get("voice")
 
-        if photo and photo.filename:
-            if photo.content_length and photo.content_length > 5 * 1024 * 1024:
-                return "File too large (max 5MB)"
-            
-        if photo and photo.filename:
-            result = cloudinary.uploader.upload(photo)
-            p = result["secure_url"]
+            wid = str(uuid.uuid4())[:8]
 
-        wid = str(uuid.uuid4())[:8]
+            p = None
+            v = None
+            video = None
 
-        p = None
-        v = None
+            # ---------- PHOTO UPLOAD ----------
+            if photo and photo.filename:
+                photo_size = get_file_size(photo)
 
-        if photo and photo.filename:
-            result = cloudinary.uploader.upload(photo)
-            p = result["secure_url"]
-            
+                if photo_size == 0:
+                    p = None
+                elif photo_size > 5 * 1024 * 1024:
+                    return "Photo file too large (max 5MB)"
+                else:
+                    result = cloudinary.uploader.upload(
+                        photo,
+                        resource_type="image"
+                    )
+                    p = result.get("secure_url")
 
-        if voice and voice.filename:
-            result = cloudinary.uploader.upload(voice, resource_type="video")
-            v = result["secure_url"]
+            # ---------- VOICE UPLOAD ----------
+            if voice and voice.filename:
+                voice_size = get_file_size(voice)
 
-        video = None
+                if voice_size == 0:
+                    v = None
+                elif voice_size > 10 * 1024 * 1024:
+                    return "Voice file too large (max 10MB)"
+                else:
+                    result = cloudinary.uploader.upload(
+                        voice,
+                        resource_type="video"
+                    )
+                    v = result.get("secure_url")
 
+            # instant wish = already processed
+            sent_value = 0 if sch else 1
 
-        conn = sqlite3.connect("wishes.db")
-        cur = conn.cursor()
+            conn = sqlite3.connect("wishes.db")
+            cur = conn.cursor()
 
-        cur.execute("""
-            INSERT INTO wishes
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
-        """, (
-            wid,
-            rec,
-            msg,
-            occ,
-            p,
-            video,
-            v,
-            sch,
-            email,
-            0,
-            template
-        ))
+            cur.execute("""
+                INSERT INTO wishes
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """, (
+                wid,
+                rec,
+                msg,
+                occ,
+                p,
+                video,
+                v,
+                sch if sch else None,
+                email if email else None,
+                sent_value,
+                template
+            ))
 
-        conn.commit()
-        conn.close()
+            conn.commit()
+            conn.close()
 
-        if not sch and email:
-                send_email(email, f"https://wish-away.onrender.com/wish/{wid}") 
+            if not sch and email:
+                send_email(email, f"https://wish-away.onrender.com/wish/{wid}")
 
-        return redirect(url_for("show", wish_id=wid))
+            return redirect(url_for("show", wish_id=wid))
+
+        except Exception as e:
+            print("CREATE ERROR:", e)
+            return f"Error while creating wish: {e}", 500
 
     return render_template("create_wish.html")
 
@@ -436,7 +269,7 @@ def show(wish_id):
     conn.close()
 
     if not wish:
-        return "Not found"
+        return "Not found", 404
 
     rec, msg, occ, photo, video, template = wish
 
