@@ -184,43 +184,47 @@ def create():
             photo = request.files.get("photo")
             voice = request.files.get("voice")
 
-            wid = str(uuid.uuid4())[:8]
-
             p = None
             v = None
             video = None
 
-            # ---------- PHOTO UPLOAD ----------
+            # ---------- PHOTO ----------
             if photo and photo.filename:
-                photo_size = get_file_size(photo)
+                try:
+                    photo.seek(0, os.SEEK_END)
+                    size = photo.tell()
+                    photo.seek(0)
 
-                if photo_size == 0:
-                    p = None
-                elif photo_size > 5 * 1024 * 1024:
-                    return "Photo file too large (max 5MB)"
-                else:
-                    result = cloudinary.uploader.upload(
-                        photo,
-                        resource_type="image"
-                    )
+                    if size > 5 * 1024 * 1024:
+                        return "Photo too large"
+
+                    result = cloudinary.uploader.upload(photo)
                     p = result.get("secure_url")
 
-            # ---------- VOICE UPLOAD ----------
-            if voice and voice.filename:
-                voice_size = get_file_size(voice)
+                except Exception as e:
+                    print("Photo error:", e)
 
-                if voice_size == 0:
-                    v = None
-                elif voice_size > 10 * 1024 * 1024:
-                    return "Voice file too large (max 10MB)"
-                else:
+            # ---------- VOICE ----------
+            if voice and voice.filename:
+                try:
+                    voice.seek(0, os.SEEK_END)
+                    size = voice.tell()
+                    voice.seek(0)
+
+                    if size > 10 * 1024 * 1024:
+                        return "Voice too large"
+
                     result = cloudinary.uploader.upload(
                         voice,
                         resource_type="video"
                     )
                     v = result.get("secure_url")
 
-            # instant wish = already processed
+                except Exception as e:
+                    print("Voice error:", e)
+
+            wid = str(uuid.uuid4())[:8]
+
             sent_value = 0 if sch else 1
 
             conn = sqlite3.connect("wishes.db")
@@ -230,15 +234,9 @@ def create():
                 INSERT INTO wishes
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """, (
-                wid,
-                rec,
-                msg,
-                occ,
-                p,
-                video,
-                v,
-                sch if sch else None,
-                email if email else None,
+                wid, rec, msg, occ,
+                p, video, v,
+                sch, email,
                 sent_value,
                 template
             ))
@@ -252,8 +250,8 @@ def create():
             return redirect(url_for("show", wish_id=wid))
 
         except Exception as e:
-            print("CREATE ERROR:", e)
-            return f"Error while creating wish: {e}", 500
+            print("Create error:", e)
+            return "Something went wrong"
 
     return render_template("create_wish.html")
 
